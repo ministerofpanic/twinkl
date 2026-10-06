@@ -99,3 +99,9 @@ describe('UserOutput', () => {
     expect(UserOutput.safeParse({ ...user, id: '123' }).success).toBe(false);
   });
 });
+
+describe('create', () => {
+  it.todo('returns the public user with a generated uuid and never the password');
+  it.todo('stores a hash, never the cleartext password');
+  it.todo('rejects a duplicate email as validation_failed on path email, without saying it is registered');
+});
