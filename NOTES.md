@@ -13,7 +13,7 @@
 - express-zod-api 23+ requires express 5, scaffold is express 4, so used v22.14.1 (last express 4 support); it needs zod 3, so zod 3.25.76 (latest 3.x) not 4. Trade-off: older majors
 - Using npm (explicitly called out in the task README), not pnpm
 - Linting: scaffold's `lint` script had no config, so `npm run lint` failed. Added `.eslintrc.json` (airbnb-base + airbnb-typescript/base, the scaffold's stack) and `tsconfig.eslint.json` so test files (excluded from the build) are linted too. Style follows airbnb (single quotes, 100 col)
-- Lint rule changes: `@typescript-eslint/no-redeclare` off (zod idiom of a schema const and inferred type sharing a name, `tsc` still catches real redeclarations); `import/prefer-default-export` off (named exports compose with `export * as User`); `func-style: declaration` (functions are declarations, e.g. `export function clear() { ... }`, which also flags arrow functions assigned to variables; inline callbacks stay arrows)
+- Lint rule changes: `@typescript-eslint/no-redeclare` off (zod idiom of a schema const and inferred type sharing a name, `tsc` still catches real redeclarations); `import/prefer-default-export` off (named exports compose with `import * as User`); `func-style: declaration` (functions are declarations, e.g. `export function clear() { ... }`, which also flags arrow functions assigned to variables; inline callbacks stay arrows)
 - Test runner: Vitest, pinned 4.1.11. Vitest 5 needs Node 22.12+ and `@types/node` 22+, scaffold has `@types/node` 20 and express-zod-api 22 supports Node 20, so 4.x is latest compatible. `npm test` runs `vitest run`
 - `*.test.ts` excluded in `tsconfig.json` so tests don't compile into `dist`
 - `createdDate`: client-supplied, keeping to the requirements (server-set would be safer, noted as tradeoff). Date only, `yyyy-mm-dd`, no time part to avoid additional complexity later related to timezones
@@ -48,7 +48,6 @@ src/
     result.ts
     errors.ts
     user/
-      index.ts        # export * as User from './user'
       user.ts         # UserInput/UserOutput schemas, create(), fromId()
       password.ts     # hash()
       store.ts        # in-memory Map
@@ -67,7 +66,7 @@ src/
 - `core` never imports `api`: one-way dependency, domain testable without HTTP
 - Handlers only map Result to HTTP status, no business rules
 - Two schemas defined with the domain: `UserInput` (signup, includes password) and `UserOutput` (never contains `password` or `passwordHash`); endpoints reuse them for input/output. Stored record additionally holds `passwordHash`
-- Domain accessed as `User.create(...)` via `export * as`, avoiding TS `namespace` keyword (non-erasable syntax)
+- Domain accessed as `User.create(...)` via `import * as User from '.../core/user/user'`, no barrel file (SST's namespace pattern without the extra module) and no TS `namespace` keyword (non-erasable syntax)
 - Alternative considered: feature folder at top level (fewer folders now, scales less well with a second domain)
 
 ## Code style
@@ -94,7 +93,6 @@ src/
 src/
   core/
     auth/                   # new
-      index.ts              # export * as Auth
       session.ts            # verifySession({ token })
       passkey.ts            # credential registration/verification
       store.ts
