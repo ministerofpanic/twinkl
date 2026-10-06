@@ -1,4 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { AppError } from '../errors';
+import { err, ok, Result } from '../result';
+import { hash } from './password';
+import { findByEmail, save } from './store';
 
 const nonEmpty = z.string().trim().min(1);
 
@@ -19,3 +24,18 @@ export type UserInput = z.infer<typeof UserInput>;
 // Strips unknown keys by default, so password and passwordHash can never leak
 export const UserOutput = UserInput.omit({ password: true }).extend({ id: z.string().uuid() });
 export type UserOutput = z.infer<typeof UserOutput>;
+
+// Deliberately generic: must not reveal that the email is already registered
+const unusableEmail: AppError = {
+  code: 'validation_failed',
+  context: { issues: [{ path: ['email'], message: 'Unable to use this email' }] },
+};
+
+export async function create(input: UserInput): Promise<Result<UserOutput, AppError>> {
+  if (findByEmail({ email: input.email })) return err(unusableEmail);
+
+  const { password, ...profile } = input;
+  const user = { ...profile, id: randomUUID(), passwordHash: await hash({ password }) };
+  save(user);
+  return ok(UserOutput.parse(user));
+}

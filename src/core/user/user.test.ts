@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { UserInput, UserOutput } from './user';
+import {
+  beforeEach, describe, expect, it,
+} from 'vitest';
+import { create, UserInput, UserOutput } from './user';
+import { clear, findByEmail } from './store';
 
 // Valid baseline: each test overrides one field to prove that field alone is the failure
 const validInput = {
@@ -101,7 +104,38 @@ describe('UserOutput', () => {
 });
 
 describe('create', () => {
-  it.todo('returns the public user with a generated uuid and never the password');
-  it.todo('stores a hash, never the cleartext password');
-  it.todo('rejects a duplicate email as validation_failed on path email, without saying it is registered');
+  const input = UserInput.parse(validInput);
+
+  beforeEach(clear);
+
+  it('returns the public user with a generated uuid and never the password', async () => {
+    expect(await create(input)).toEqual({
+      ok: true,
+      value: {
+        id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
+        fullName: 'Ada Lovelace',
+        email: 'ada@example.com',
+        createdDate: '2024-07-09',
+        userType: 'teacher',
+      },
+    });
+  });
+
+  it('stores a hash, never the cleartext password', async () => {
+    await create(input);
+    const stored = findByEmail({ email: input.email });
+    expect(stored?.passwordHash).toMatch(/^\$argon2id\$/);
+    expect(JSON.stringify(stored)).not.toContain(input.password);
+  });
+
+  it('rejects a duplicate email as validation_failed on path email, without saying it is registered', async () => {
+    await create(input);
+    expect(await create(input)).toEqual({
+      ok: false,
+      error: {
+        code: 'validation_failed',
+        context: { issues: [{ path: ['email'], message: 'Unable to use this email' }] },
+      },
+    });
+  });
 });
