@@ -34,7 +34,9 @@ describe('AppError', () => {
   });
 
   it('validation_failed requires issues with path and message', () => {
-    expect(AppError.safeParse({ ...validationFailed, context: { issues: [] } }).success).toBe(false);
+    expect(
+      AppError.safeParse({ ...validationFailed, context: { issues: [] } }).success,
+    ).toBe(false);
     expect(
       AppError.safeParse({ ...validationFailed, context: { issues: [{ path: ['a'] }] } }).success,
     ).toBe(false);

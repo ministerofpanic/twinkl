@@ -13,6 +13,8 @@
 - express-zod-api glues express and zod (typed endpoints, input parsing, error responses)
 - express-zod-api 23+ requires express 5, scaffold is express 4, so used v22.14.1 (last express 4 support); it needs zod 3, so zod 3.25.76 (latest 3.x) not 4. Trade-off: older majors
 - Using npm (explicitly called out in the task README), not pnpm
+- Linting: scaffold's `lint` script had no config, so `npm run lint` failed. Added `.eslintrc.json` (airbnb-base + airbnb-typescript/base, the scaffold's stack) and `tsconfig.eslint.json` so test files (excluded from the build) are linted too
+- Style follows airbnb (single quotes, 100 col). `@typescript-eslint/no-redeclare` off: zod idiom of a schema const and inferred type sharing a name, `tsc` still catches real redeclarations
 - Test runner: Vitest, pinned 4.1.11. Vitest 5 needs Node 22.12+ and `@types/node` 22+, scaffold has `@types/node` 20 and express-zod-api 22 supports Node 20, so 4.x is latest compatible. `npm test` runs `vitest run`
 - `*.test.ts` excluded in `tsconfig.json` so tests don't compile into `dist`
 - `createdDate`: client-supplied, keeping to the requirements (server-set would be safer, noted as tradeoff). Date only, `yyyy-mm-dd`, no time part to avoid additional complexity later related to timezones.
