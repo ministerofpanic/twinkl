@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { AppError } from '../errors';
 import { err, ok, Result } from '../result';
 import { hash } from './password';
-import { findByEmail, save } from './store';
+import { findByEmail, findById, save } from './store';
 
 const nonEmpty = z.string().trim().min(1);
 
@@ -37,5 +37,13 @@ export async function create(input: UserInput): Promise<Result<UserOutput, AppEr
   const { password, ...profile } = input;
   const user = { ...profile, id: randomUUID(), passwordHash: await hash({ password }) };
   save(user);
+  return ok(UserOutput.parse(user));
+}
+
+// Async like create, so a real database can replace the in-memory store without changing callers
+export async function fromId({ id }: { id: string }): Promise<Result<UserOutput, AppError>> {
+  const user = findById({ id });
+  if (!user) return err({ code: 'user_not_found', context: { id } });
+
   return ok(UserOutput.parse(user));
 }

@@ -1,7 +1,9 @@
 import {
   beforeEach, describe, expect, it,
 } from 'vitest';
-import { create, UserInput, UserOutput } from './user';
+import {
+  create, fromId, UserInput, UserOutput,
+} from './user';
 import { clear, findByEmail } from './store';
 
 // Valid baseline: each test overrides one field to prove that field alone is the failure
@@ -136,6 +138,33 @@ describe('create', () => {
         code: 'validation_failed',
         context: { issues: [{ path: ['email'], message: 'Unable to use this email' }] },
       },
+    });
+  });
+});
+
+describe('fromId', () => {
+  beforeEach(clear);
+
+  it('returns the public user, never the password or its hash', async () => {
+    const created = await create(UserInput.parse(validInput));
+    const { id } = created.ok ? created.value : { id: '' };
+    expect(await fromId({ id })).toEqual({
+      ok: true,
+      value: {
+        id,
+        fullName: 'Ada Lovelace',
+        email: 'ada@example.com',
+        createdDate: '2024-07-09',
+        userType: 'teacher',
+      },
+    });
+  });
+
+  it('returns user_not_found with the id for an unknown id', async () => {
+    const id = '00000000-0000-4000-8000-000000000000';
+    expect(await fromId({ id })).toEqual({
+      ok: false,
+      error: { code: 'user_not_found', context: { id } },
     });
   });
 });
