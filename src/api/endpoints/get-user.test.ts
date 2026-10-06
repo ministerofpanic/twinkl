@@ -61,6 +61,18 @@ describe('GET /users/:id', () => {
     });
   });
 
-  it.todo('unknown id: 404 user_not_found with the id');
-  it.todo('id that is not a uuid: 400 validation_failed on path id');
+  it('unknown id: 404 user_not_found with the id', async () => {
+    const id = '00000000-0000-4000-8000-000000000000';
+    const response = await getUser({ id });
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ code: 'user_not_found', context: { id } });
+  });
+
+  it('id that is not a uuid: 400 validation_failed on path id', async () => {
+    const response = await getUser({ id: 'not-a-uuid' });
+    const body = await response.json();
+    expect(response.status).toBe(400);
+    expect(body.code).toBe('validation_failed');
+    expect(body.context.issues.map(({ path }: { path: string[] }) => path)).toEqual([['id']]);
+  });
 });
