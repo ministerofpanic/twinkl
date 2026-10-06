@@ -26,8 +26,9 @@
 ## AI usage
 
 - Grace confirmed AI use is ok at this stage
-- Want to stay in control and refresh coding skills, so leaning on it less
-- AI used for: note taking (documenting thinking process) and skeleton tests only
+- Initially planned to lean on it less (note taking and skeleton tests only) to stay in control and refresh coding skills
+- Changed at implementation: using Claude Code to implement, with TDD and minimal changes; design decisions, scope and review stay with me
+- Process: skeleton tests first, implement to green, rigour check on subtle tests (break implementation, confirm test fails for the right reason, restore)
 
 ## Design
 
