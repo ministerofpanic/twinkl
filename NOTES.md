@@ -103,6 +103,7 @@ Things I am thinking about but not tackling for this task:
 - Idempotency: if a client retries a signup after a network failure, the second attempt is rejected as a duplicate email, which is confusing. Safe retries need a request key the server remembers
 - Authentication: anyone can read any user if they have the id (see Future work)
 - Observability: only unexpected errors are logged. No request logging, metrics (counts, timings) or alerts, and no way to follow one request through the system
+- API versioning: routes have no version (`/users`). Once real clients depend on the request and response shapes, changing them breaks those clients. Options: a version in the path (`/v1/users`) or in a header
 
 ## Future work
 
