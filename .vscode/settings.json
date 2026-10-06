@@ -7,5 +7,6 @@
   },
   "[javascript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-  }
+  },
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }
