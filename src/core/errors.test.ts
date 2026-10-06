@@ -9,9 +9,11 @@ const userNotFound = {
   code: 'user_not_found',
   context: { id: '6f1f3a52-0f1e-4f56-9d5b-0f0c8f3b1d11' },
 };
+const notFound = { code: 'not_found', context: {} };
+const internalError = { code: 'internal_error', context: {} };
 
 describe('AppError', () => {
-  it.each([validationFailed, userNotFound])('accepts a valid $code error', (error) => {
+  it.each([validationFailed, userNotFound, notFound, internalError])('accepts a valid $code error', (error) => {
     expect(AppError.safeParse(error).success).toBe(true);
   });
 
@@ -44,5 +46,9 @@ describe('AppError', () => {
 
   it('user_not_found requires the id', () => {
     expect(AppError.safeParse({ ...userNotFound, context: {} }).success).toBe(false);
+  });
+
+  it.each([notFound, internalError])('$code has an empty context, so nothing internal can leak', (error) => {
+    expect(AppError.safeParse({ ...error, context: { detail: 'stack trace' } }).success).toBe(false);
   });
 });

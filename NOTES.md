@@ -33,7 +33,7 @@
 
 - Validation: "parse, don't validate" - parse shape at the boundary with zod
 - Control flow via Result type, avoid relying on exceptions (can throw anything)
-- Error structure: `{ code, context }`, a strict zod schema (`AppError`) in `core/errors.ts`, discriminated union by `code` so `context` is typed per code (`validation_failed`: issues with path and message; `user_not_found`: id)
+- Error structure: `{ code, context }`, a strict zod schema (`AppError`) in `core/errors.ts`, discriminated union by `code` so `context` is typed per code (`validation_failed`: issues with path and message; `user_not_found`: id; `not_found` for unknown routes and `internal_error` for unexpected exceptions, both with an empty strict context so nothing internal can leak)
 - Error schema is the `negative` of the express-zod-api result handler, not an endpoint `output` (output is success only)
 - `api/factories.ts`: express-zod-api endpoints factory with a custom result handler so every endpoint emits `{ code, context }` errors; endpoints build from it (verify v22 API when implementing). Later gains an authenticated factory (see Future work)
 

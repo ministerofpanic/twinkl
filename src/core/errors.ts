@@ -14,6 +14,8 @@ export const AppError = z.discriminatedUnion('code', [
     code: z.literal('user_not_found'),
     context: z.object({ id: z.string() }).strict(),
   }).strict(),
+  z.object({ code: z.literal('not_found'), context: z.object({}).strict() }).strict(),
+  z.object({ code: z.literal('internal_error'), context: z.object({}).strict() }).strict(),
 ]);
 
 export type AppError = z.infer<typeof AppError>;
