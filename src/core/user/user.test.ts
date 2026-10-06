@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { UserInput } from './user';
+import { UserInput, UserOutput } from './user';
 
 // Valid baseline: each test overrides one field to prove that field alone is the failure
 const validInput = {
@@ -82,6 +82,20 @@ describe('UserInput', () => {
 });
 
 describe('UserOutput', () => {
-  it.todo('contains id, fullName, email, createdDate, userType and never password or passwordHash');
-  it.todo('rejects an id that is not a uuid');
+  const user = {
+    id: '6f1f3a52-0f1e-4f56-9d5b-0f0c8f3b1d11',
+    fullName: 'Ada Lovelace',
+    email: 'ada@example.com',
+    createdDate: '2024-07-09',
+    userType: 'teacher',
+  };
+
+  it('contains id, fullName, email, createdDate, userType and never password or passwordHash', () => {
+    const result = UserOutput.parse({ ...user, password: 'Passw0rdOk', passwordHash: '$argon2id$' });
+    expect(result).toEqual(user);
+  });
+
+  it('rejects an id that is not a uuid', () => {
+    expect(UserOutput.safeParse({ ...user, id: '123' }).success).toBe(false);
+  });
 });

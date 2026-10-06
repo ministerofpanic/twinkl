@@ -15,3 +15,7 @@ export const UserInput = z.object({
   userType: z.enum(['student', 'teacher', 'parent', 'private tutor']),
 });
 export type UserInput = z.infer<typeof UserInput>;
+
+// Strips unknown keys by default, so password and passwordHash can never leak
+export const UserOutput = UserInput.omit({ password: true }).extend({ id: z.string().uuid() });
+export type UserOutput = z.infer<typeof UserOutput>;
