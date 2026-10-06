@@ -84,6 +84,17 @@ describe('POST /users', () => {
       'Password must contain an uppercase letter',
     ]);
   });
-  it.todo('duplicate email: 400 validation_failed on email, without saying it is registered');
-  it.todo('duplicate email ignores upper or lower case');
+
+  it.each([
+    ['the same email', 'ada@example.com'],
+    ['the same email in different case', 'ADA@Example.COM'],
+  ])('duplicate email (%s): 400 validation_failed on email, without saying it is registered', async (_, email) => {
+    await signup(validSignup);
+    const response = await signup({ ...validSignup, email });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      code: 'validation_failed',
+      context: { issues: [{ path: ['email'], message: 'Unable to use this email' }] },
+    });
+  });
 });
