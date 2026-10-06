@@ -59,7 +59,31 @@ describe('POST /users', () => {
     expect(JSON.stringify(stored)).not.toContain(validSignup.password);
   });
 
-  it.todo('invalid input: 400 validation_failed listing every failed field, including all password rules');
+  it('invalid input: 400 validation_failed listing every failed field, including all password rules', async () => {
+    const response = await signup({
+      fullName: '',
+      email: 'not-an-email',
+      password: '!',
+      createdDate: '09/07/2024',
+      userType: 'admin',
+    });
+    const body = await response.json();
+    expect(response.status).toBe(400);
+    expect(body.code).toBe('validation_failed');
+    expect(body.context.issues.map(({ path }: { path: string[] }) => path.join('.'))).toEqual([
+      'fullName', 'email', 'password', 'password', 'password', 'password', 'createdDate', 'userType',
+    ]);
+    expect(
+      body.context.issues
+        .filter(({ path }: { path: string[] }) => path[0] === 'password')
+        .map(({ message }: { message: string }) => message),
+    ).toEqual([
+      'Password must be at least 8 characters',
+      'Password must contain a digit',
+      'Password must contain a lowercase letter',
+      'Password must contain an uppercase letter',
+    ]);
+  });
   it.todo('duplicate email: 400 validation_failed on email, without saying it is registered');
   it.todo('duplicate email ignores upper or lower case');
 });
