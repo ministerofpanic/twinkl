@@ -17,6 +17,7 @@
   - Off: the rule against a value and a type sharing a name (a common zod pattern; the compiler still catches real clashes)
   - Off: the rule preferring default exports (we use named exports)
   - On: functions are written as `function clear() { ... }`, not as arrow functions stored in variables. Short inline callbacks stay arrows
+- Startup warning: `npm run dev` printed a deprecation warning from express-zod-api v22, which leaves a form-handling option unspecified. `api/config.ts` now sets it explicitly (the simple form parser, since this API only expects JSON). `api/config.test.ts` fails if any deprecation warning appears at startup
 - Test runner: Vitest 4.1.11. Vitest 5 needs a newer Node (22.12 or later) than the starter supports, so 4.x is the latest that fits. Run with `npm test`
 - Test files are left out of the build so they don't end up in `dist`
 - `createdDate` is supplied by the client, as the requirements say. Server-set would be safer, but that is not what was asked. Date only (`yyyy-mm-dd`), no time, to avoid time zone problems later
