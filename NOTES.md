@@ -17,6 +17,7 @@
 - `*.test.ts` excluded in `tsconfig.json` so tests don't compile into `dist`
 - `createdDate`: client-supplied, keeping to the requirements (server-set would be safer, noted as tradeoff). Date only, `yyyy-mm-dd`, no time part to avoid additional complexity later related to timezones.
 - Duplicate emails prevented (case-insensitive, email lowercased when parsed)
+- Duplicate email is returned as `validation_failed` (400) on the email path, not a distinct `email_taken` (409), so the response doesn't state the email is registered. Residual leak: 400 vs 201 still reveals it
 - Passwords hashed, never stored as cleartext: Argon2id (OWASP recommended) via `hash-wasm` (WASM, no native binaries, CJS build, no deps)
 - Would naturally choose `@node-rs/argon2` (native, faster) but chose `hash-wasm` to reduce risk of install failure on a reviewer's platform; hashing sits behind one small module so swapping is a one-file change
 - Data store: in-memory over SQLite or equivalent - pragmatic, avoids extra libraries/complexity
@@ -32,7 +33,8 @@
 
 - Validation: "parse, don't validate" - parse shape at the boundary with zod
 - Control flow via Result type, avoid relying on exceptions (can throw anything)
-- Error structure: `{ code, context }`
+- Error structure: `{ code, context }`, a strict zod schema (`AppError`) in `core/errors.ts`, discriminated union by `code` so `context` is typed per code (`validation_failed`: issues with path and message; `user_not_found`: id)
+- Error schema is the `negative` of the express-zod-api result handler, not an endpoint `output` (output is success only)
 - `api/factories.ts`: express-zod-api endpoints factory with a custom result handler so every endpoint emits `{ code, context }` errors; endpoints build from it (verify v22 API when implementing). Later gains an authenticated factory (see Future work)
 
 ## Structure
@@ -112,3 +114,4 @@ src/
 
 - Passkeys replace passwords: `core/user/password.ts` goes away or shrinks
 - Upgrade path for deps: express 5 + zod 4 + latest express-zod-api, and review scaffold vulnerabilities from `npm audit`
+- Generate Swagger/OpenAPI docs from the zod schemas (express-zod-api `Documentation`), including the `AppError` negative responses per status code

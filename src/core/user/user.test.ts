@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 
+// Valid baseline: each test overrides one field to prove that field alone is the failure
 const validInput = {
   fullName: "Ada Lovelace",
   email: "ada@example.com",
@@ -9,53 +10,23 @@ const validInput = {
 };
 
 describe("UserInput", () => {
-  describe("valid input", () => {
-    it.todo("accepts a valid signup");
-    it.todo("accepts each userType: student, teacher, parent, private tutor");
-  });
+  it.todo("accepts a valid signup for each userType: student, teacher, parent, private tutor");
+  it.todo("rejects each required field when empty, whitespace-only or missing (it.each over fields)");
 
-  describe("required fields", () => {
-    it.todo("rejects empty fullName");
-    it.todo("rejects whitespace-only fullName");
-    it.todo("rejects empty email");
-    it.todo("rejects empty password");
-    it.todo("rejects empty createdDate");
-    it.todo("rejects empty userType");
-    it.todo("rejects missing fields");
-  });
-
-  describe("password rules", () => {
-    it.todo("rejects 7 characters");
-    it.todo("accepts 8 characters (lower boundary)");
-    it.todo("accepts 64 characters (upper boundary)");
-    it.todo("rejects 65 characters");
-    it.todo("rejects no digit");
-    it.todo("rejects no lowercase letter");
-    it.todo("rejects no uppercase letter");
+  describe("password", () => {
+    it.todo("enforces 8 to 64 characters at the boundaries (7 and 65 rejected, 8 and 64 accepted)");
+    it.todo("rejects a missing digit, lowercase or uppercase letter (it.each over rules)");
     it.todo("reports every failed rule together, not just the first");
     it.todo("does not trim the password");
   });
 
-  describe("email", () => {
-    it.todo("rejects an invalid email");
-    it.todo("lowercases the email when parsed");
-  });
-
-  describe("userType", () => {
-    it.todo("rejects an unknown userType");
-  });
-
-  describe("createdDate", () => {
-    it.todo("accepts yyyy-mm-dd");
-    it.todo("rejects a date with a time part");
-    it.todo("rejects an impossible date, e.g. 2024-02-30");
-    it.todo("rejects a wrong format, e.g. 09/07/2024");
-  });
+  it.todo("rejects an invalid email");
+  it.todo("lowercases the email when parsed");
+  it.todo("rejects an unknown userType");
+  it.todo("accepts yyyy-mm-dd and rejects anything else: time part, 2024-02-30, 09/07/2024 (it.each)");
 });
 
 describe("UserOutput", () => {
-  it.todo("contains id, fullName, email, createdDate, userType");
-  it.todo("does not contain password");
-  it.todo("does not contain passwordHash");
+  it.todo("contains id, fullName, email, createdDate, userType and never password or passwordHash");
   it.todo("rejects an id that is not a uuid");
 });
