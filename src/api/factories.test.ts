@@ -5,11 +5,12 @@ import {
   afterAll, beforeAll, describe, expect, it,
 } from 'vitest';
 import { z } from 'zod';
+import { AppError } from '../core/errors';
 import { factory } from './factories';
 
 const echo = factory.build({
   method: 'post',
-  input: z.object({ name: z.string() }),
+  input: z.object({ name: z.string(), count: z.number() }),
   output: z.object({ greeting: z.string() }),
   handler: async ({ input }) => ({ greeting: `Hello ${input.name}` }),
 });
@@ -40,12 +41,20 @@ afterAll(() => Promise.all(servers.map(close)));
 
 describe('endpoints factory result handler', () => {
   it('success: responds with the endpoint output as JSON, no envelope', async () => {
-    const response = await post({ path: '/echo', body: { name: 'Ada' } });
+    const response = await post({ path: '/echo', body: { name: 'Ada', count: 1 } });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ greeting: 'Hello Ada' });
   });
 
-  it.todo('invalid input: 400 validation_failed listing every issue with path and message');
+  it('invalid input: 400 validation_failed listing every issue with path and message', async () => {
+    const response = await post({ path: '/echo', body: {} });
+    const body = await response.json();
+    expect(response.status).toBe(400);
+    expect(AppError.safeParse(body).success).toBe(true);
+    expect(body.code).toBe('validation_failed');
+    expect(body.context.issues.map(({ path }: { path: string[] }) => path)).toEqual([['name'], ['count']]);
+  });
+
   it.todo('domain error from the endpoint: body is { code, context }, status mapped from code (validation_failed 400, user_not_found 404)');
   it.todo('unexpected exception: 500 with a generic body and no internal details leaked');
   it.todo('errors outside endpoints (unknown route, malformed JSON) use the same { code, context } body');
