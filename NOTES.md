@@ -2,46 +2,59 @@
 
 ## Setup / process
 
-- Set up git, publish as private GitHub repo until ready to expose
-- Requirements are very clear, which suits TDD
+- Set up git, publish as a private GitHub repo until ready to share
+- Requirements are very clear, so tests can be written first
 
 ## Decisions
 
-- Existing deps left as-is: provided scaffold lint stack (airbnb configs cap eslint 8 / typescript-eslint 7) blocks "all latest", and Twinkl may be constrained to these versions. `npm audit` reports 20 known vulnerabilities (1 critical, proxy-addr) in scaffold deps, left as-is
-- New deps (zod, express-zod-api) pinned exact, past cooling period; `.npmrc` sets `min-release-age=5` (5 day cooling period guards against unknown/malicious releases) and `save-exact=true`
-- express-zod-api glues express and zod (typed endpoints, input parsing, error responses)
-- express-zod-api 23+ requires express 5, scaffold is express 4, so used v22.14.1 (last express 4 support); it needs zod 3, so zod 3.25.76 (latest 3.x) not 4. Trade-off: older majors
-- Using npm (explicitly called out in the task README), not pnpm
-- Linting: scaffold's `lint` script had no config, so `npm run lint` failed. Added `.eslintrc.json` (airbnb-base + airbnb-typescript/base, the scaffold's stack) and `tsconfig.eslint.json` so test files (excluded from the build) are linted too. Style follows airbnb (single quotes, 100 col)
-- Lint rule changes: `@typescript-eslint/no-redeclare` off (zod idiom of a schema const and inferred type sharing a name, `tsc` still catches real redeclarations); `import/prefer-default-export` off (named exports compose with `import * as User`); `func-style: declaration` (functions are declarations, e.g. `export function clear() { ... }`, which also flags arrow functions assigned to variables; inline callbacks stay arrows)
-- Test runner: Vitest, pinned 4.1.11. Vitest 5 needs Node 22.12+ and `@types/node` 22+, scaffold has `@types/node` 20 and express-zod-api 22 supports Node 20, so 4.x is latest compatible. `npm test` runs `vitest run`
-- `*.test.ts` excluded in `tsconfig.json` so tests don't compile into `dist`
-- `createdDate`: client-supplied, keeping to the requirements (server-set would be safer, noted as tradeoff). Date only, `yyyy-mm-dd`, no time part to avoid additional complexity later related to timezones
-- Duplicate emails prevented (case-insensitive, email lowercased when parsed). Returned as `validation_failed` (400) on the email path, not a distinct `email_taken` (409), so the response doesn't state the email is registered. Residual leak: 400 vs 201 still reveals it
-- Passwords hashed, never stored as cleartext: Argon2id (OWASP recommended) via `hash-wasm` (WASM, no native binaries, CJS build, no deps). Would naturally choose `@node-rs/argon2` (native, faster) but chose `hash-wasm` to reduce risk of install failure on a reviewer's platform; hashing sits behind one small module so swapping is a one-file change
-- Data store: in-memory over SQLite or equivalent - pragmatic, avoids extra libraries/complexity
-- uuid ids: unguessable, mitigates enumeration; Broken Object Level Authorisation (BOLA) (OWASP API1:2019) not solved without auth (fix: see Future work)
+- Existing packages from the starter project are left as they were. Its linting packages (airbnb) only work with older versions of eslint, so "update everything to latest" would break them, and Twinkl may depend on these versions. `npm audit` reports 20 known security problems (1 critical) in these starter packages, left as they are
+- New packages (zod, express-zod-api, vitest, hash-wasm) are fixed to an exact version. `.npmrc` also blocks versions published in the last 5 days (`min-release-age=5`), so a freshly published malicious release can't be installed
+- zod checks incoming data. express-zod-api connects Express to zod (input checking, error responses)
+- express-zod-api v23 and later need Express 5, but the starter uses Express 4. So the project uses v22.14.1 (the last one for Express 4), which needs zod 3 (3.25.76). Trade-off: not the latest versions
+- npm, not pnpm: the task README calls for npm
+- Linting: the starter's `lint` command had no configuration, so it failed. Added one using the starter's own rules (airbnb), and it also checks test files. Style: single quotes, 100 characters per line
+- Lint rules changed:
+  - Off: the rule against a value and a type sharing a name (a common zod pattern; the compiler still catches real clashes)
+  - Off: the rule preferring default exports (we use named exports)
+  - On: functions are written as `function clear() { ... }`, not as arrow functions stored in variables. Short inline callbacks stay arrows
+- Test runner: Vitest 4.1.11. Vitest 5 needs a newer Node (22.12 or later) than the starter supports, so 4.x is the latest that fits. Run with `npm test`
+- Test files are left out of the build so they don't end up in `dist`
+- `createdDate` is supplied by the client, as the requirements say. Server-set would be safer, but that is not what was asked. Date only (`yyyy-mm-dd`), no time, to avoid time zone problems later
+- Duplicate emails are rejected, ignoring upper or lower case. The response is a generic validation error (400, "Unable to use this email"), not a specific "already registered" error (409), so it doesn't confirm that an email is registered. This is only a partial fix: a 400 (rejected) versus a 201 (created) still tells someone whether the email exists. A full fix needs an email verification step, not built
+- Passwords are never stored as typed. They are stored as a hash (a slow one-way scramble) using Argon2id, the OWASP recommendation. The package is `hash-wasm`: it works on every platform because it has no compiled parts. `@node-rs/argon2` would be my natural choice (faster) but could fail to install on a reviewer's machine. Hashing lives in one small file, so swapping is easy
+- Data store: an in-memory list, not a database. Simple, and avoids extra packages
+- User ids are random UUIDs, so they can't be guessed and someone can't loop through ids to find users. This does not stop someone who already has an id from reading that user. That needs a login (see Future work)
 
 ## AI usage
 
 - Grace confirmed AI use is ok at this stage
-- Initially planned to lean on it less (note taking and skeleton tests only) to stay in control and refresh coding skills
-- Changed at implementation: using Claude Code to implement, with TDD and minimal changes; design decisions, scope and review stay with me
-- Process: small steps, each reviewed and committed by me. Skeleton tests first, implement to green, rigour check on subtle tests (break implementation, confirm test fails for the right reason, restore)
+- Initially planned to lean on it less (note taking and starter tests only) to stay in control and refresh coding skills
+- Changed at implementation: using Claude Code to write the code, with tests first and minimal changes. Design decisions, scope and review stay with me
+- Process: small steps, each reviewed and committed by me. Write the test, see it fail, write the code, see it pass. For tests that guard subtle behaviour, deliberately break the code, confirm the test fails for the right reason, then put it back
 
 ## Design
 
-- Validation: "parse, don't validate" - parse shape at the boundary with zod
-- Control flow via Result type, avoid relying on exceptions (can throw anything)
-- Error structure: `{ code, context }`, a strict zod schema (`AppError`) in `core/errors.ts`, discriminated union by `code` so `context` is typed per code (`validation_failed`: issues with path and message; `user_not_found`: id; `not_found` for unknown routes and `internal_error` for unexpected exceptions, both with an empty strict context so nothing internal can leak)
-- Error schema is the `negative` of the express-zod-api result handler, not an endpoint `output` (output is success only)
-- `api/factories.ts`: express-zod-api endpoints factory with a custom result handler so every endpoint emits `{ code, context }` errors; endpoints build from it (verify v22 API when implementing). Later gains an authenticated factory (see Future work)
-- Error mapping lives in `api/factories.ts` (`toAppError`): thrown `ApiError` (domain errors, since endpoint handlers can only return output; `core` stays Result-based), input validation and malformed JSON become `validation_failed` 400, unknown route `not_found` 404, anything else (unexpected exceptions, and HTTP statuses like 501, 413, 429) `internal_error` 500 with a generic body and the real error logged server-side. Same handler is the server `errorHandler` in `api/config.ts` so errors outside endpoints share the shape. Trade-off: original status of other HTTP errors is lost, each would need its own code
+- Incoming data is checked and turned into the right shape at the edge (with zod) before any logic runs
+- Expected failures (invalid input, duplicate email, user not found) are returned as values, not thrown. Throwing is kept for unexpected problems
+- Every error has the same shape: `{ code, context }`. Codes:
+  - `validation_failed`: a list of problems, each with the field and a message
+  - `user_not_found`: the id
+  - `not_found`: unknown web address, no extra data
+  - `internal_error`: something unexpected, no extra data
+  - The last two carry nothing extra so internal details can't leak. All four are defined once as a zod schema in `core/errors.ts`
+- Errors are declared as the error response in express-zod-api, not as an endpoint's success output
+- `api/factories.ts` is the shared starting point for every endpoint, and sends all errors in the same shape. Later it gains a version that requires login (see Future work)
+- Error handling in `api/factories.ts`:
+  - An endpoint can only return a success value, so a domain failure is thrown inside a small wrapper at the endpoint and turned into the right status
+  - Invalid input or broken JSON gives 400, an unknown address gives 404
+  - Anything else gives 500 with a generic message. The real error is written to the server log, never sent to the client
+  - The same handler covers errors outside endpoints (in `api/config.ts`)
+  - Trade-off: other HTTP errors (413 body too large, 429 too many requests, 501 not implemented) are reported as 500. Keeping their real status needs a new error code for each
 
 ## Structure
 
-- SST-inspired, flattened to one package: `src/core` (domain logic) and `src/api` (thin HTTP layer)
-- Single package, not a monorepo: one deployable, nothing shared, simpler to run locally
+- Business logic (`src/core`) is kept separate from the web layer (`src/api`), following the SST project layout guidance
+- One package, not several: one app, nothing shared, and simpler to run locally
 
 ```
 src/
@@ -51,11 +64,11 @@ src/
     user/
       user.ts         # UserInput/UserOutput schemas, create(), fromId()
       password.ts     # hash()
-      store.ts        # in-memory Map
+      store.ts        # in-memory list
       user.test.ts
   api/
     config.ts
-    factories.ts      # endpoints factory, custom result handler
+    factories.ts      # shared endpoint starting point, error handling
     routing.ts
     endpoints/
       signup.ts       # POST /users
@@ -64,51 +77,60 @@ src/
   index.ts
 ```
 
-- `core` never imports `api`: one-way dependency, domain testable without HTTP
-- Handlers only map Result to HTTP status, no business rules
-- Two schemas defined with the domain: `UserInput` (signup, includes password) and `UserOutput` (never contains `password` or `passwordHash`); endpoints reuse them for input/output. Stored record additionally holds `passwordHash`
-- Domain accessed as `User.create(...)` via `import * as User from '.../core/user/user'`, no barrel file (SST's namespace pattern without the extra module) and no TS `namespace` keyword (non-erasable syntax)
-- Alternative considered: feature folder at top level (fewer folders now, scales less well with a second domain)
+- `core` never imports from `api`, so the business logic can be tested without a web server
+- Endpoints only translate results into HTTP responses, with no business rules
+- Two schemas for a user: `UserInput` (signup, includes the password) and `UserOutput` (never contains the password or its hash). Endpoints reuse them. The stored record also holds the password hash
+- Used as `User.create(...)` through `import * as User from '.../core/user/user'`. No extra index file, and no TypeScript `namespace` keyword
+- Alternative considered: a folder per feature at the top level (fewer folders now, but less tidy once there is a second area such as auth)
 
 ## Code style
 
-- Return early pattern
-- Small single-purpose functions, easier to reason about in review
-- Single function argument (object): avoids inconsistent max-args advice, simpler to modify from callsites
+- Return early: leave a function as soon as the answer is known
+- Small functions that do one thing, easier to review
+- One function argument (an object): avoids confusion about how many arguments are too many, and is easier to change where it is called
 
 ## Approach
 
-- POST endpoint (in progress): schema as input, returns user id (uuid) with 201, or error object
-- GET endpoint: uuid as input, returns user object or error object
+- POST endpoint: takes a user, returns the new user id (uuid) with 201, or an error
+- GET endpoint: takes a uuid, returns the user or an error
 - Refine documentation last
+
+## Considering, not tackling yet
+
+Things I am thinking about but not tackling for this task:
+
+- Rate limiting: nothing stops a client calling signup thousands of times, or guessing ids. Limit requests per client
+- Idempotency: if a client retries a signup after a network failure, the second attempt is rejected as a duplicate email, which is confusing. Safe retries need a request key the server remembers
+- Authentication: anyone can read any user if they have the id (see Future work)
+- Observability: only unexpected errors are logged. No request logging, metrics (counts, timings) or alerts, and no way to follow one request through the system
 
 ## Future work
 
-- Auth, split by concern:
-  - Authentication in `api`: `api/middleware/auth.ts` (express-zod-api middleware, provides `{ requesterId }` or 401) and `api/factories.ts` (authenticated endpoints factory; `signup` stays public)
-  - Authorisation in `core`: `User.fromId({ id, requesterId })` returns forbidden/not_found unless requester matches (or has role); resolves the BOLA tradeoff, testable without HTTP
-  - New `core/auth/` domain (`session.ts`, `passkey.ts`, `store.ts`), middleware calls `Auth.verifySession({ token })`
-- Auth file layout:
+- Login (authentication) and who may see what (authorisation):
+  - Login check in `api`: `api/middleware/auth.ts` works out who is calling, or returns 401. `api/factories.ts` gets a version of the endpoint starting point that requires login. Signup stays public
+  - Permission check in `core`: `User.fromId({ id, requesterId })` returns an error unless the caller is that user (or has a role). This closes the gap noted under user ids, and can be tested without a web server
+  - New `core/auth/` area (sessions and passkeys). The login check calls `Auth.verifySession({ token })`
+- File layout with login:
 
 ```
 src/
   core/
     auth/                   # new
       session.ts            # verifySession({ token })
-      passkey.ts            # credential registration/verification
+      passkey.ts            # passkey registration and checking
       store.ts
     user/
-      user.ts               # fromId({ id, requesterId }) enforces ownership
+      user.ts               # fromId({ id, requesterId }) checks ownership
       password.ts
   api/
     middleware/
-      auth.ts               # calls Auth.verifySession, provides { requesterId } or 401
-    factories.ts            # authenticated endpoints factory
+      auth.ts               # works out the caller, or returns 401
+    factories.ts            # login-required endpoint starting point
     endpoints/
-      signup.ts             # stays on public factory
-      get-user.ts           # moves to authenticated factory
+      signup.ts             # stays public
+      get-user.ts           # now requires login
 ```
 
-- Passkeys replace passwords: `core/user/password.ts` goes away or shrinks
-- Upgrade path for deps: express 5 + zod 4 + latest express-zod-api, and review scaffold vulnerabilities from `npm audit`
-- Generate Swagger/OpenAPI docs from the zod schemas (express-zod-api `Documentation`), including the `AppError` negative responses per status code
+- Passkeys replace passwords (no password to store at all), so `core/user/password.ts` goes away or shrinks
+- Upgrade packages: Express 5, zod 4 and the latest express-zod-api, and deal with the security problems `npm audit` reports in the starter packages
+- Generate API documentation (Swagger/OpenAPI) from the zod schemas using express-zod-api, including the error responses for each status
