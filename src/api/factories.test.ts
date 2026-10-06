@@ -6,7 +6,7 @@ import {
 } from 'vitest';
 import { z } from 'zod';
 import { AppError } from '../core/errors';
-import { factory } from './factories';
+import { ApiError, factory } from './factories';
 
 const echo = factory.build({
   method: 'post',
@@ -14,6 +14,31 @@ const echo = factory.build({
   output: z.object({ greeting: z.string() }),
   handler: async ({ input }) => ({ greeting: `Hello ${input.name}` }),
 });
+
+const domainErrors = [
+  {
+    name: 'validationFailed',
+    status: 400,
+    error: {
+      code: 'validation_failed',
+      context: { issues: [{ path: ['email'], message: 'Unable to use this email' }] },
+    },
+  },
+  {
+    name: 'userNotFound',
+    status: 404,
+    error: { code: 'user_not_found', context: { id: '6f1f3a52-0f1e-4f56-9d5b-0f0c8f3b1d11' } },
+  },
+] satisfies { name: string; status: number; error: AppError }[];
+
+function failWith(appError: AppError) {
+  return factory.build({
+    method: 'post',
+    input: z.object({}),
+    output: z.object({}),
+    handler: async () => { throw new ApiError(appError); },
+  });
+}
 
 let servers: Awaited<ReturnType<typeof createServer>>['servers'];
 let baseUrl: string;
@@ -29,7 +54,10 @@ function post({ path, body }: { path: string; body: unknown }) {
 // Integration: real server on a random port, throwaway endpoints built from the factory
 beforeAll(async () => {
   const config = createConfig({ http: { listen: 0 }, cors: false, logger: { level: 'silent' } });
-  ({ servers } = await createServer(config, { echo }));
+  ({ servers } = await createServer(config, {
+    echo,
+    ...Object.fromEntries(domainErrors.map(({ name, error }) => [name, failWith(error)])),
+  }));
   baseUrl = `http://localhost:${(servers[0].address() as AddressInfo).port}`;
 });
 
@@ -55,7 +83,12 @@ describe('endpoints factory result handler', () => {
     expect(body.context.issues.map(({ path }: { path: string[] }) => path)).toEqual([['name'], ['count']]);
   });
 
-  it.todo('domain error from the endpoint: body is { code, context }, status mapped from code (validation_failed 400, user_not_found 404)');
+  it.each(domainErrors)('domain error $error.code: body is { code, context }, status $status', async ({ name, status, error }) => {
+    const response = await post({ path: `/${name}`, body: {} });
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual(error);
+  });
+
   it.todo('unexpected exception: 500 with a generic body and no internal details leaked');
   it.todo('errors outside endpoints (unknown route, malformed JSON) use the same { code, context } body');
 });
