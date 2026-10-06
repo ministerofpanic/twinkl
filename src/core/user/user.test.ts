@@ -10,9 +10,9 @@ const validInput = {
   userType: 'teacher',
 };
 
-const parse = (override: Record<string, unknown>) => (
-  UserInput.safeParse({ ...validInput, ...override })
-);
+function parse(override: Record<string, unknown>) {
+  return UserInput.safeParse({ ...validInput, ...override });
+}
 
 describe('UserInput', () => {
   it.each(['student', 'teacher', 'parent', 'private tutor'])(

@@ -4,11 +4,15 @@ export type StoredUser = UserOutput & { passwordHash: string };
 
 const users = new Map<string, StoredUser>();
 
-export const save = (user: StoredUser) => { users.set(user.id, user); };
+export function save(user: StoredUser) {
+  users.set(user.id, user);
+}
 
-export const findByEmail = ({ email }: { email: string }) => (
-  [...users.values()].find((user) => user.email === email)
-);
+export function findByEmail({ email }: { email: string }) {
+  return [...users.values()].find((user) => user.email === email);
+}
 
 // Test isolation only
-export const clear = () => users.clear();
+export function clear() {
+  users.clear();
+}
