@@ -5,4 +5,5 @@ export const config = createConfig({
   http: { listen: Number(process.env.PORT) || 3000 },
   cors: false,
   errorHandler: resultHandler,
+  startupLogo: false,
 });

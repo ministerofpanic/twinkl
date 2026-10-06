@@ -72,8 +72,10 @@ src/
     routing.ts
     endpoints/
       signup.ts       # POST /users
+      signup.test.ts
       get-user.ts     # GET /users/:id
-    api.test.ts
+      get-user.test.ts
+    factories.test.ts
   index.ts
 ```
 
@@ -91,7 +93,7 @@ src/
 
 ## Approach
 
-- POST endpoint: takes a user, returns the new user id (uuid) with 201, or an error
+- POST endpoint (done): takes a user, returns the new user id (uuid) with 201, or an error
 - GET endpoint: takes a uuid, returns the user or an error
 - Refine documentation last
 

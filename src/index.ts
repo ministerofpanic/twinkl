@@ -1,13 +1,5 @@
-import express, { Express, Request, Response } from 'express';
+import { createServer } from 'express-zod-api';
+import { config } from './api/config';
+import { routing } from './api/routing';
 
-const app: Express = express();
-const port = process.env.PORT || 3000;
-
-app.get('/', (req: Request, res: Response) => {
-  res.send('Hello World!');
-});
-
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`[server]: Server is running at http://localhost:${port}`);
-});
+createServer(config, routing);
