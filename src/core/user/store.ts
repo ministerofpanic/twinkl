@@ -8,6 +8,10 @@ export function save(user: StoredUser) {
   users.set(user.id, user);
 }
 
+export function findById({ id }: { id: string }) {
+  return users.get(id);
+}
+
 export function findByEmail({ email }: { email: string }) {
   return [...users.values()].find((user) => user.email === email);
 }
