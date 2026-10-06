@@ -18,7 +18,9 @@ export class ApiError extends Error {
 const resultHandler = new ResultHandler({
   positive: (output) => output,
   negative: { schema: AppError, statusCode: [400, 404, 500] },
-  handler: ({ error, output, response }) => {
+  handler: ({
+    error, output, response, logger,
+  }) => {
     if (error instanceof ApiError) {
       response.status(statusByCode[error.appError.code]).json(error.appError);
       return;
@@ -26,6 +28,12 @@ const resultHandler = new ResultHandler({
     if (error instanceof InputValidationError) {
       const issues = error.cause.issues.map(({ path, message }) => ({ path, message }));
       response.status(400).json({ code: 'validation_failed', context: { issues } });
+      return;
+    }
+    if (error) {
+      // Real error stays in the server log, the body is deliberately generic
+      logger.error('Unexpected error', error);
+      response.status(500).json({ code: 'internal_error', context: {} });
       return;
     }
     response.status(200).json(output);

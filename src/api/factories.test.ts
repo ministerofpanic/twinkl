@@ -2,7 +2,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createConfig, createServer } from 'express-zod-api';
 import {
-  afterAll, beforeAll, describe, expect, it,
+  afterAll, beforeAll, describe, expect, it, vi,
 } from 'vitest';
 import { z } from 'zod';
 import { AppError } from '../core/errors';
@@ -40,6 +40,17 @@ function failWith(appError: AppError) {
   });
 }
 
+const boom = factory.build({
+  method: 'post',
+  input: z.object({}),
+  output: z.object({}),
+  handler: async () => { throw new Error('secret db password'); },
+});
+
+const logger = {
+  debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(),
+};
+
 let servers: Awaited<ReturnType<typeof createServer>>['servers'];
 let baseUrl: string;
 
@@ -53,9 +64,10 @@ function post({ path, body }: { path: string; body: unknown }) {
 
 // Integration: real server on a random port, throwaway endpoints built from the factory
 beforeAll(async () => {
-  const config = createConfig({ http: { listen: 0 }, cors: false, logger: { level: 'silent' } });
+  const config = createConfig({ http: { listen: 0 }, cors: false, logger });
   ({ servers } = await createServer(config, {
     echo,
+    boom,
     ...Object.fromEntries(domainErrors.map(({ name, error }) => [name, failWith(error)])),
   }));
   baseUrl = `http://localhost:${(servers[0].address() as AddressInfo).port}`;
@@ -89,6 +101,14 @@ describe('endpoints factory result handler', () => {
     expect(await response.json()).toEqual(error);
   });
 
-  it.todo('unexpected exception: 500 with a generic body and no internal details leaked');
+  it('unexpected exception: 500 with a generic body, real error logged server-side only', async () => {
+    const response = await post({ path: '/boom', body: {} });
+    const text = await response.text();
+    expect(response.status).toBe(500);
+    expect(JSON.parse(text)).toEqual({ code: 'internal_error', context: {} });
+    expect(text).not.toContain('secret');
+    expect(logger.error.mock.calls.some(([, logged]) => logged?.message === 'secret db password')).toBe(true);
+  });
+
   it.todo('errors outside endpoints (unknown route, malformed JSON) use the same { code, context } body');
 });
