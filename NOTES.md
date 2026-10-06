@@ -36,6 +36,7 @@
 - Error structure: `{ code, context }`, a strict zod schema (`AppError`) in `core/errors.ts`, discriminated union by `code` so `context` is typed per code (`validation_failed`: issues with path and message; `user_not_found`: id; `not_found` for unknown routes and `internal_error` for unexpected exceptions, both with an empty strict context so nothing internal can leak)
 - Error schema is the `negative` of the express-zod-api result handler, not an endpoint `output` (output is success only)
 - `api/factories.ts`: express-zod-api endpoints factory with a custom result handler so every endpoint emits `{ code, context }` errors; endpoints build from it (verify v22 API when implementing). Later gains an authenticated factory (see Future work)
+- Error mapping lives in `api/factories.ts` (`toAppError`): thrown `ApiError` (domain errors, since endpoint handlers can only return output; `core` stays Result-based), input validation and malformed JSON become `validation_failed` 400, unknown route `not_found` 404, anything else (unexpected exceptions, and HTTP statuses like 501, 413, 429) `internal_error` 500 with a generic body and the real error logged server-side. Same handler is the server `errorHandler` in `api/config.ts` so errors outside endpoints share the shape. Trade-off: original status of other HTTP errors is lost, each would need its own code
 
 ## Structure
 

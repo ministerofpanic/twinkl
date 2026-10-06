@@ -6,6 +6,7 @@ import {
 } from 'vitest';
 import { z } from 'zod';
 import { AppError } from '../core/errors';
+import { config } from './config';
 import { ApiError, factory } from './factories';
 
 const echo = factory.build({
@@ -64,8 +65,8 @@ function post({ path, body }: { path: string; body: unknown }) {
 
 // Integration: real server on a random port, throwaway endpoints built from the factory
 beforeAll(async () => {
-  const config = createConfig({ http: { listen: 0 }, cors: false, logger });
-  ({ servers } = await createServer(config, {
+  const testConfig = createConfig({ ...config, http: { listen: 0 }, logger });
+  ({ servers } = await createServer(testConfig, {
     echo,
     boom,
     ...Object.fromEntries(domainErrors.map(({ name, error }) => [name, failWith(error)])),
@@ -110,5 +111,22 @@ describe('endpoints factory result handler', () => {
     expect(logger.error.mock.calls.some(([, logged]) => logged?.message === 'secret db password')).toBe(true);
   });
 
-  it.todo('errors outside endpoints (unknown route, malformed JSON) use the same { code, context } body');
+  it('unknown route: 404 not_found', async () => {
+    const response = await post({ path: '/nope', body: {} });
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ code: 'not_found', context: {} });
+  });
+
+  it('malformed JSON: 400 validation_failed', async () => {
+    const response = await fetch(`${baseUrl}/echo`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{not json',
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      code: 'validation_failed',
+      context: { issues: [{ path: [], message: 'Malformed request body' }] },
+    });
+  });
 });
