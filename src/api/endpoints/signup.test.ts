@@ -4,7 +4,7 @@ import { createConfig, createServer } from 'express-zod-api';
 import {
   afterAll, beforeAll, beforeEach, describe, expect, it,
 } from 'vitest';
-import { clear } from '../../core/user/store';
+import { clear, findByEmail } from '../../core/user/store';
 import { config } from '../config';
 import { routing } from '../routing';
 
@@ -51,7 +51,14 @@ describe('POST /users', () => {
     });
   });
 
-  it.todo('stores the user with a hashed password');
+  it('stores the user with a hashed password', async () => {
+    const { id } = await (await signup(validSignup)).json();
+    const stored = findByEmail({ email: validSignup.email });
+    expect(stored?.id).toBe(id);
+    expect(stored?.passwordHash).toMatch(/^\$argon2id\$/);
+    expect(JSON.stringify(stored)).not.toContain(validSignup.password);
+  });
+
   it.todo('invalid input: 400 validation_failed listing every failed field, including all password rules');
   it.todo('duplicate email: 400 validation_failed on email, without saying it is registered');
   it.todo('duplicate email ignores upper or lower case');
