@@ -1,8 +1,56 @@
-import { describe, it } from 'vitest';
+import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { createConfig, createServer } from 'express-zod-api';
+import {
+  afterAll, beforeAll, beforeEach, describe, expect, it,
+} from 'vitest';
+import { clear } from '../../core/user/store';
+import { config } from '../config';
+import { routing } from '../routing';
 
-// Integration: real server on a random port using the real routing, store cleared between tests
+const validSignup = {
+  fullName: 'Ada Lovelace',
+  email: 'ada@example.com',
+  password: 'Passw0rdOk',
+  createdDate: '2024-07-09',
+  userType: 'teacher',
+};
+
+let servers: Server[];
+let baseUrl: string;
+
+function signup(body: unknown) {
+  return fetch(`${baseUrl}/users`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+function close(server: Server) {
+  return new Promise((resolve) => { server.close(resolve); });
+}
+
+// Integration: real server on a random port using the real routing
+beforeAll(async () => {
+  const testConfig = createConfig({ ...config, http: { listen: 0 }, logger: { level: 'silent' } });
+  ({ servers } = await createServer(testConfig, routing));
+  baseUrl = `http://localhost:${(servers[0].address() as AddressInfo).port}`;
+});
+
+afterAll(() => Promise.all(servers.map(close)));
+
+beforeEach(clear);
+
 describe('POST /users', () => {
-  it.todo('creates a user: 201 with { id } (uuid) and nothing else');
+  it('creates a user: 201 with { id } (uuid) and nothing else', async () => {
+    const response = await signup(validSignup);
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({
+      id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
+    });
+  });
+
   it.todo('stores the user with a hashed password');
   it.todo('invalid input: 400 validation_failed listing every failed field, including all password rules');
   it.todo('duplicate email: 400 validation_failed on email, without saying it is registered');

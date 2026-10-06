@@ -7,9 +7,9 @@ import {
 import { z } from 'zod';
 import { AppError } from '../core/errors';
 import { config } from './config';
-import { ApiError, factory } from './factories';
+import { ApiError, http200Factory } from './factories';
 
-const echo = factory.build({
+const echo = http200Factory.build({
   method: 'post',
   input: z.object({ name: z.string(), count: z.number() }),
   output: z.object({ greeting: z.string() }),
@@ -33,7 +33,7 @@ const domainErrors = [
 ] satisfies { name: string; status: number; error: AppError }[];
 
 function failWith(appError: AppError) {
-  return factory.build({
+  return http200Factory.build({
     method: 'post',
     input: z.object({}),
     output: z.object({}),
@@ -41,7 +41,7 @@ function failWith(appError: AppError) {
   });
 }
 
-const boom = factory.build({
+const boom = http200Factory.build({
   method: 'post',
   input: z.object({}),
   output: z.object({}),
@@ -63,7 +63,7 @@ function post({ path, body }: { path: string; body: unknown }) {
   });
 }
 
-// Integration: real server on a random port, throwaway endpoints built from the factory
+// Integration: real server on a random port, throwaway endpoints built from the 200 factory
 beforeAll(async () => {
   const testConfig = createConfig({ ...config, http: { listen: 0 }, logger });
   ({ servers } = await createServer(testConfig, {

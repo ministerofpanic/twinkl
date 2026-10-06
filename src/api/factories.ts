@@ -35,21 +35,27 @@ function toAppError(error: Error): AppError {
   return { code: 'internal_error', context: {} };
 }
 
-export const resultHandler = new ResultHandler({
-  positive: (output) => output,
-  negative: { schema: AppError, statusCode: [400, 404, 500] },
-  handler: ({
-    error, output, response, logger,
-  }) => {
-    if (!error) {
-      response.status(200).json(output);
-      return;
-    }
-    const appError = toAppError(error);
-    // Real error stays in the server log, the body is deliberately generic
-    if (appError.code === 'internal_error') logger.error('Unexpected error', error);
-    response.status(statusByCode[appError.code]).json(appError);
-  },
-});
+function createResultHandler({ successStatus }: { successStatus: number }) {
+  return new ResultHandler({
+    positive: (output) => ({ schema: output, statusCode: successStatus }),
+    negative: { schema: AppError, statusCode: [400, 404, 500] },
+    handler: ({
+      error, output, response, logger,
+    }) => {
+      if (!error) {
+        response.status(successStatus).json(output);
+        return;
+      }
+      const appError = toAppError(error);
+      // Real error stays in the server log, the body is deliberately generic
+      if (appError.code === 'internal_error') logger.error('Unexpected error', error);
+      response.status(statusByCode[appError.code]).json(appError);
+    },
+  });
+}
 
-export const factory = new EndpointsFactory(resultHandler);
+// Shared by the server errorHandler, so the success status is irrelevant there
+export const resultHandler = createResultHandler({ successStatus: 200 });
+
+export const http200Factory = new EndpointsFactory(resultHandler);
+export const http201Factory = new EndpointsFactory(createResultHandler({ successStatus: 201 }));

@@ -43,7 +43,7 @@
   - `internal_error`: something unexpected, no extra data
   - The last two carry nothing extra so internal details can't leak. All four are defined once as a zod schema in `core/errors.ts`
 - Errors are declared as the error response in express-zod-api, not as an endpoint's success output
-- `api/factories.ts` is the shared starting point for every endpoint, and sends all errors in the same shape. Later it gains a version that requires login (see Future work)
+- `api/factories.ts` holds the shared starting points for endpoints, and sends all errors in the same shape. There is one per success status we use: `http200Factory` (reads) and `http201Factory` (creates, e.g. signup). Error statuses don't need their own, and a new success status means a new one Later it gains a version that requires login (see Future work)
 - Error handling in `api/factories.ts`:
   - An endpoint can only return a success value, so a domain failure is thrown inside a small wrapper at the endpoint and turned into the right status
   - Invalid input or broken JSON gives 400, an unknown address gives 404
