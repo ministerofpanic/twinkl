@@ -1,6 +1,10 @@
 import type { Routing } from 'express-zod-api';
+import { getUser } from './endpoints/get-user';
 import { signup } from './endpoints/signup';
 
 export const routing: Routing = {
-  users: signup,
+  users: {
+    '': signup,
+    ':id': getUser,
+  },
 };
