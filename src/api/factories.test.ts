@@ -7,7 +7,7 @@ import {
 import { z } from 'zod';
 import { AppError } from '../core/errors';
 import { config } from './config';
-import { ApiError, http200Factory } from './factories';
+import { ApiError, http200Factory, http204Factory } from './factories';
 
 const echo = http200Factory.build({
   method: 'post',
@@ -52,6 +52,13 @@ const logger = {
   debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(),
 };
 
+const noContent = http204Factory.build({
+  method: 'post',
+  input: z.object({ id: z.string().uuid() }),
+  output: z.object({}),
+  handler: async () => ({}),
+});
+
 let servers: Awaited<ReturnType<typeof createServer>>['servers'];
 let baseUrl: string;
 
@@ -69,6 +76,7 @@ beforeAll(async () => {
   ({ servers } = await createServer(testConfig, {
     echo,
     boom,
+    noContent,
     ...Object.fromEntries(domainErrors.map(({ name, error }) => [name, failWith(error)])),
   }));
   baseUrl = `http://localhost:${(servers[0].address() as AddressInfo).port}`;
@@ -100,6 +108,20 @@ describe('endpoints factory result handler', () => {
     const response = await post({ path: `/${name}`, body: {} });
     expect(response.status).toBe(status);
     expect(await response.json()).toEqual(error);
+  });
+
+  it('no content: 204 with an empty body', async () => {
+    const response = await post({ path: '/noContent', body: { id: '6f1f3a52-0f1e-4f56-9d5b-0f0c8f3b1d11' } });
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+  });
+
+  it('errors from a 204 endpoint still use { code, context }', async () => {
+    const response = await post({ path: '/noContent', body: { id: 'not-a-uuid' } });
+    const body = await response.json();
+    expect(response.status).toBe(400);
+    expect(body.code).toBe('validation_failed');
+    expect(body.context.issues.map(({ path }: { path: string[] }) => path)).toEqual([['id']]);
   });
 
   it('unexpected exception: 500 with a generic body, real error logged server-side only', async () => {

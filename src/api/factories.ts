@@ -1,6 +1,7 @@
 import {
   EndpointsFactory, ensureHttpError, InputValidationError, ResultHandler,
 } from 'express-zod-api';
+import { z } from 'zod';
 import { AppError } from '../core/errors';
 
 const statusByCode = {
@@ -36,14 +37,19 @@ function toAppError(error: Error): AppError {
 }
 
 function createResultHandler({ successStatus }: { successStatus: number }) {
+  // 204 has no body, so it is described to the docs as an empty response
+  const empty = successStatus === 204;
   return new ResultHandler({
-    positive: (output) => ({ schema: output, statusCode: successStatus }),
+    positive: (output) => (empty
+      ? { statusCode: successStatus, mimeType: null, schema: z.never() }
+      : { statusCode: successStatus, schema: output }),
     negative: { schema: AppError, statusCode: [400, 404, 500] },
     handler: ({
       error, output, response, logger,
     }) => {
       if (!error) {
-        response.status(successStatus).json(output);
+        if (empty) response.status(successStatus).end();
+        else response.status(successStatus).json(output);
         return;
       }
       const appError = toAppError(error);
@@ -59,3 +65,4 @@ export const resultHandler = createResultHandler({ successStatus: 200 });
 
 export const http200Factory = new EndpointsFactory(resultHandler);
 export const http201Factory = new EndpointsFactory(createResultHandler({ successStatus: 201 }));
+export const http204Factory = new EndpointsFactory(createResultHandler({ successStatus: 204 }));
