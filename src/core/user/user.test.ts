@@ -2,7 +2,7 @@ import {
   beforeEach, describe, expect, it,
 } from 'vitest';
 import {
-  create, fromId, UserInput, UserOutput,
+  create, fromId, remove, UserInput, UserOutput,
 } from './user';
 import { clear, findByEmail } from './store';
 
@@ -166,5 +166,24 @@ describe('fromId', () => {
       ok: false,
       error: { code: 'user_not_found', context: { id } },
     });
+  });
+});
+
+describe('remove', () => {
+  beforeEach(clear);
+
+  it('removes the user and returns ok with the id', async () => {
+    const created = await create(UserInput.parse(validInput));
+    const { id } = created.ok ? created.value : { id: '' };
+    expect(await remove({ id })).toEqual({ ok: true, value: { id } });
+    expect(await fromId({ id })).toEqual({
+      ok: false,
+      error: { code: 'user_not_found', context: { id } },
+    });
+  });
+
+  it('succeeds for an unknown id, since the user is gone either way', async () => {
+    const id = '00000000-0000-4000-8000-000000000000';
+    expect(await remove({ id })).toEqual({ ok: true, value: { id } });
   });
 });

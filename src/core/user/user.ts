@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { AppError } from '../errors';
 import { err, ok, Result } from '../result';
 import { hash } from './password';
-import { findByEmail, findById, save } from './store';
+import {
+  findByEmail, findById, remove as removeFromStore, save,
+} from './store';
 
 const nonEmpty = z.string().trim().min(1);
 
@@ -46,4 +48,10 @@ export async function fromId({ id }: { id: string }): Promise<Result<UserOutput,
   if (!user) return err({ code: 'user_not_found', context: { id } });
 
   return ok(UserOutput.parse(user));
+}
+
+// Succeeds even if the user is not there: the outcome (no such user) is the same either way
+export async function remove({ id }: { id: string }): Promise<Result<{ id: string }, AppError>> {
+  removeFromStore({ id });
+  return ok({ id });
 }
