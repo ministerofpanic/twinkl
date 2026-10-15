@@ -16,6 +16,10 @@ export function findByEmail({ email }: { email: string }) {
   return [...users.values()].find((user) => user.email === email);
 }
 
+export function remove({ id }: { id: string }) {
+  users.delete(id);
+}
+
 // Test isolation only
 export function clear() {
   users.clear();
