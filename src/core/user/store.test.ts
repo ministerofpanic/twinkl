@@ -2,7 +2,7 @@ import {
   beforeEach, describe, expect, it,
 } from 'vitest';
 import {
-  clear, findByEmail, findById, save,
+  clear, findByEmail, findById, list, save,
 } from './store';
 
 const user = {
@@ -13,6 +13,14 @@ const user = {
   userType: 'teacher' as const,
   passwordHash: '$argon2id$example',
 };
+
+function makeUser({ n }: { n: number }) {
+  return {
+    ...user,
+    id: `00000000-0000-4000-8000-00000000000${n}`,
+    email: `user${n}@example.com`,
+  };
+}
 
 describe('store', () => {
   beforeEach(clear);
@@ -45,7 +53,12 @@ describe('store', () => {
 
   // Cursor is a number the store gives each user when saved (never shown to clients)
   describe('paginated list', () => {
-    it.todo('first page: returns saved users in a fixed order, no more than the limit');
+    it('first page: returns saved users in a fixed order, no more than the limit', () => {
+      const [first, second, third] = [1, 2, 3].map((n) => makeUser({ n }));
+      [first, second, third].forEach(save);
+      expect(list({ limit: 2 }).items).toEqual([first, second]);
+    });
+
     it.todo('returns a next cursor when more users remain, and none on the last page');
     it.todo('exactly the limit remaining: no next cursor');
     it.todo('after a cursor: returns the users that follow it');
