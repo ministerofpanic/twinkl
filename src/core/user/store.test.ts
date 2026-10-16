@@ -42,4 +42,18 @@ describe('store', () => {
     clear();
     expect(findByEmail({ email: 'ada@example.com' })).toBeUndefined();
   });
+
+  describe('paginated list', () => {
+    it.todo('first page: returns saved users in a fixed order, no more than the limit');
+    it.todo('returns a next cursor when more users remain, and none on the last page');
+    it.todo('exactly the limit remaining: no next cursor');
+    it.todo('after a cursor: returns the users that follow it');
+    it.todo('following the cursors to the end returns every user once, with no gaps or repeats');
+    it.todo('empty store: an empty list and no cursor');
+    it.todo('a user saved between pages appears later, with nothing repeated');
+    it.todo('an unknown cursor: decide what the store does (nothing, or an error)');
+    it.todo('returns the full stored users, including passwordHash (the core strips it)');
+    // Needs remove, which is on the delete-endpoint branch
+    it.todo('the cursor of a since-deleted user still continues from the right place');
+  });
 });
