@@ -27,9 +27,9 @@ export function findByEmail({ email }: { email: string }) {
   return [...entries.values()].find((entry) => entry.user.email === email)?.user;
 }
 
-export function list({ limit }: { limit: number }) {
+export function list({ limit, after = 0 }: { limit: number; after?: number }) {
   // Ask for one extra to learn whether another page exists, without counting everyone
-  const page = [...entries.values()].slice(0, limit + 1);
+  const page = [...entries.values()].filter((entry) => entry.seq > after).slice(0, limit + 1);
   const items = page.slice(0, limit);
   const nextCursor = page.length > limit ? items[items.length - 1].seq : undefined;
   return { items: items.map((entry) => entry.user), nextCursor };

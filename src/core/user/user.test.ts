@@ -191,4 +191,16 @@ describe('list', () => {
     });
     expect(JSON.stringify(result)).not.toContain('passwordHash');
   });
+
+  it('the cursor from one page gives the next page, and null at the end', async () => {
+    // One after another, so the save order is the order the cursor follows
+    await create(UserInput.parse({ ...validInput, email: 'user1@example.com' }));
+    await create(UserInput.parse({ ...validInput, email: 'user2@example.com' }));
+    await create(UserInput.parse({ ...validInput, email: 'user3@example.com' }));
+    const first = await list({ limit: 2 });
+    const cursor = first.ok ? first.value.nextCursor : null;
+    const second = await list({ limit: 2, after: cursor ?? undefined });
+    expect(second.ok && second.value.items).toHaveLength(1);
+    expect(second.ok && second.value.nextCursor).toBeNull();
+  });
 });

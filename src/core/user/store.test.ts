@@ -72,7 +72,13 @@ describe('store', () => {
       expect(page.nextCursor).toBeUndefined();
     });
 
-    it.todo('after a cursor: returns the users that follow it');
+    it('after a cursor: returns the users that follow it', () => {
+      const [first, second, third, fourth] = [1, 2, 3, 4].map((n) => makeUser({ n }));
+      [first, second, third, fourth].forEach(save);
+      const { nextCursor } = list({ limit: 2 });
+      expect(list({ limit: 2, after: nextCursor }).items).toEqual([third, fourth]);
+    });
+
     it.todo('following the cursors to the end returns every user once, with no gaps or repeats');
     it.todo('empty store: an empty list and no cursor');
     it.todo('a cursor past the end: an empty list and no cursor');
