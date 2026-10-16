@@ -59,7 +59,12 @@ describe('store', () => {
       expect(list({ limit: 2 }).items).toEqual([first, second]);
     });
 
-    it.todo('returns a next cursor when more users remain, and none on the last page');
+    it('returns a next cursor when more users remain, and none on the last page', () => {
+      [1, 2, 3].map((n) => makeUser({ n })).forEach(save);
+      expect(list({ limit: 2 }).nextCursor).toBeDefined();
+      expect(list({ limit: 5 }).nextCursor).toBeUndefined();
+    });
+
     it.todo('exactly the limit remaining: no next cursor');
     it.todo('after a cursor: returns the users that follow it');
     it.todo('following the cursors to the end returns every user once, with no gaps or repeats');
