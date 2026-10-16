@@ -19,6 +19,7 @@
 - Duplicate emails are rejected, ignoring upper or lower case. The response is a generic validation error (400, "Unable to use this email"), not a specific "already registered" error (409), so it doesn't confirm that an email is registered. This is only a partial fix: a 400 (rejected) versus a 201 (created) still tells someone whether the email exists. A full fix needs an email verification step, not built
 - Passwords are never stored as typed. They are stored as a hash (a slow one-way scramble) using Argon2id, the recommendation from OWASP (a web security standards group). The package is `hash-wasm`: it works on every platform because it has no compiled parts. `@node-rs/argon2` would be my natural choice (faster) but could fail to install on a reviewer's machine. Hashing lives in one small file, so swapping is easy
 - Data store: an in-memory list, not a database. Simple, and avoids extra packages
+- Listing users (planned, on the `get-users` branch) uses cursor pagination. Each user gets a hidden, ever-increasing number when saved, and a client asks for "the next N users after this number". Page numbers would skip or repeat people if users are added or deleted between requests, and a cursor still works if the user the client stopped at has since been deleted. The number is never shown: clients get an opaque cursor (encoded text) they just pass back. The store fetches one extra user to know whether there is a next page, without counting everyone. Not used: `createdDate` (client-supplied, date only, so many ties) or the user id (breaks if that user is deleted). Like reading one user, listing has no login yet, and it would expose every email
 - User ids are random UUIDs (long random identifiers), so they can't be guessed and someone can't loop through ids to find users. This does not stop someone who already has an id from reading that user. That needs a login (see Future work)
 
 ## Packages and tooling
@@ -107,6 +108,7 @@ src/
 - POST endpoint (done): takes a user, returns the new user id (uuid) with 201, or an error
 - GET endpoint (done): takes a uuid, returns the user or an error
 - Documentation (done): `README.md` with run steps and `curl` examples
+- List endpoint (in progress, `get-users` branch): `GET /users` returns a page of users and a cursor for the next page. Store first, then core, then the endpoint
 
 ## Considering, not tackling yet
 
