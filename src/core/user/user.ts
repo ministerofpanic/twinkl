@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { AppError } from '../errors';
 import { err, ok, Result } from '../result';
 import { hash } from './password';
-import { findByEmail, findById, save } from './store';
+import {
+  findByEmail, findById, list as listFromStore, save,
+} from './store';
 
 const nonEmpty = z.string().trim().min(1);
 
@@ -46,4 +48,20 @@ export async function fromId({ id }: { id: string }): Promise<Result<UserOutput,
   if (!user) return err({ code: 'user_not_found', context: { id } });
 
   return ok(UserOutput.parse(user));
+}
+
+// The cursor is opaque to clients: the store's sort number, encoded
+function encodeCursor(seq: number) {
+  return Buffer.from(String(seq)).toString('base64url');
+}
+
+export async function list({ limit }: { limit: number }): Promise<Result<{
+  items: UserOutput[];
+  nextCursor: string | null;
+}, AppError>> {
+  const page = listFromStore({ limit });
+  return ok({
+    items: page.items.map((user) => UserOutput.parse(user)),
+    nextCursor: page.nextCursor === undefined ? null : encodeCursor(page.nextCursor),
+  });
 }

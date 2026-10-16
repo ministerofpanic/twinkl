@@ -2,7 +2,7 @@ import {
   beforeEach, describe, expect, it,
 } from 'vitest';
 import {
-  create, fromId, UserInput, UserOutput,
+  create, fromId, list, UserInput, UserOutput,
 } from './user';
 import { clear, findByEmail } from './store';
 
@@ -166,5 +166,29 @@ describe('fromId', () => {
       ok: false,
       error: { code: 'user_not_found', context: { id } },
     });
+  });
+});
+
+describe('list', () => {
+  beforeEach(clear);
+
+  it('returns public users for a page and an opaque next cursor, never the password or hash', async () => {
+    await create(UserInput.parse(validInput));
+    await create(UserInput.parse({ ...validInput, email: 'grace@example.com' }));
+    const result = await list({ limit: 1 });
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        items: [{
+          id: expect.any(String),
+          fullName: 'Ada Lovelace',
+          email: 'ada@example.com',
+          createdDate: '2024-07-09',
+          userType: 'teacher',
+        }],
+        nextCursor: expect.any(String),
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain('passwordHash');
   });
 });
